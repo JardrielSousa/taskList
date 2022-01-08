@@ -1,10 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:html';
-
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:localstorage/localstorage.dart';
 
 void main() {
@@ -24,8 +20,7 @@ class _HomeState extends State<Home> {
   final toDoController = TextEditingController();
 
   List _toDoList = [];
-  final LocalStorage storage = new LocalStorage('todo_app.json');
-  final Storage _localStorage = window.localStorage;
+  final LocalStorage storage = new LocalStorage('todo_app');
 
   Map<String, dynamic> _lastRemoved = Map();
   int _lastRemovedPos = 0;
@@ -47,6 +42,18 @@ class _HomeState extends State<Home> {
     });
   }
 
+  Future<Null> _refresh() async{
+    await Future.delayed(Duration(seconds: 1));
+    setState(() {
+      _toDoList.sort((a,b){
+        if(a["ok"] && a["ok"]) return 1;
+        else if (!a["ok"]&&b["ok"])  return -1;
+        else return 0;
+      });
+      _saveData();
+    });
+    return null;
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,10 +87,13 @@ class _HomeState extends State<Home> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-                padding: EdgeInsets.only(top: 10),
-                itemCount: _toDoList.length,
-                itemBuilder: buildItem),
+            child: RefreshIndicator(
+              child: ListView.builder(
+                  padding: EdgeInsets.only(top: 10),
+                  itemCount: _toDoList.length,
+                  itemBuilder: buildItem),
+              onRefresh: _refresh ,
+            )
           ),
         ],
       ),
@@ -136,7 +146,7 @@ class _HomeState extends State<Home> {
                 }),
             duration: Duration(seconds: 2),
           );
-
+          Scaffold.of(context).removeCurrentSnackBar();
           Scaffold.of(context).showSnackBar(snack);
         });
       },
@@ -149,11 +159,11 @@ class _HomeState extends State<Home> {
 
   Future _saveData() async {
     String data = json.encode(_toDoList);
-    return _localStorage['todos'] = data;
+    return storage.setItem('todos', data);
   }
 
   Future _readData() async {
-    var data = window.localStorage['todos'];
+    dynamic data = storage.getItem('todos');
     if (data == null) return [];
     List<dynamic> retorno = jsonDecode(data);
     _toDoList = [];
