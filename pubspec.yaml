@@ -37,6 +37,7 @@ dependencies:
   path_provider: ^2.0.5
   hive_flutter: ^1.1.0
   localstorage: ^4.0.0+1
+  http:
 dev_dependencies:
   flutter_test:
     sdk: flutter

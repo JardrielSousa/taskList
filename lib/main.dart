@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:localstorage/localstorage.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MaterialApp(
@@ -17,6 +18,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  static const baseUrl = 'chatflutter-36298-default-rtdb.firebaseio.com';
   final toDoController = TextEditingController();
 
   List _toDoList = [];
@@ -32,12 +34,15 @@ class _HomeState extends State<Home> {
   }
 
   void _addToDo() {
-    setState(() {
+    setState(()  {
       Map<String, dynamic> newToDo = {};
       newToDo["title"] = toDoController.text;
       toDoController.text = "";
       newToDo["ok"] = false;
+      var id = _toDoList.length+1;
+      newToDo["id"] = id;
       _toDoList.add(newToDo);
+      saveFirebase(newToDo);
       _saveData();
     });
   }
@@ -123,16 +128,30 @@ class _HomeState extends State<Home> {
         onChanged: (value) {
           setState(() {
             _toDoList[index]["ok"] = value;
+            updateFirebase(_toDoList[index]);
             _saveData();
+            dynamic data = storage.getItem('todos');
+            if (data != null){
+              List<dynamic> retorno = jsonDecode(data);
+              _toDoList = [];
+              print(retorno);
+              retorno.forEach((data) {
+                _toDoList.add({'title': data['title'], 'ok': data['ok']});
+              });
+            }
+            saveFirebase(_toDoList);
           });
         },
       ),
       onDismissed: (direction) {
         setState(() {
+          var url = Uri.https(baseUrl,'/task.json');
           _lastRemoved = Map.from(_toDoList[index]);
+          http.delete(url,body:json.encode(_toDoList));
           _lastRemovedPos = index;
           _toDoList.removeAt(index);
           _saveData();
+          http.post(url,body: json.encode(_toDoList));
 
           final snack = SnackBar(
             content: Text("Tarefa ${_lastRemoved["title"]} removida !"),
@@ -152,6 +171,20 @@ class _HomeState extends State<Home> {
       },
     );
   }
+
+   saveFirebase(newToDo) {
+    var url = Uri.https(baseUrl,'/task.json');
+    final response = http.post(url,
+        body: json.encode(newToDo));
+//    final id = json.decode(response.body)['name'];
+    print('s;');
+  }
+
+  void updateFirebase(newToDo)  {
+    var url = Uri.https(baseUrl,'/task/.json');
+    http.delete(url);
+  }
+
 
   Future _getFile() async {
     _toDoList = storage.getItem('todos');
